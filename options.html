@@ -3,50 +3,99 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Tab Grouper - Settings</title>
+  <title>Tab Forge - Settings</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    /* Reset */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.6;
-      margin: 0;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
-      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px;
+      color: #333;
     }
 
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
+    .settings-layout {
+      display: flex;
+      width: 100%;
+      max-width: 1000px;
       background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
       border-radius: 16px;
-      padding: 30px;
+      overflow: hidden;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     }
 
-    h1 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 30px;
-      font-size: 28px;
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #f7f9fc;
+      border-right: 1px solid #e1e5e9;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .sidebar h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #444;
+    }
+
+    .nav-btn {
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 8px;
+      background: none;
+      text-align: left;
+      font-size: 15px;
+      font-weight: 500;
+      color: #444;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .nav-btn:hover {
+      background: #e2e8f0;
+    }
+
+    /* Content area */
+    .content {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .content h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 20px;
     }
 
     .section {
+      display: none;
       margin-bottom: 30px;
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .section.active {
+      display: block;
     }
 
     .section h2 {
-      margin-top: 0;
+      font-size: 18px;
+      margin-bottom: 15px;
+      font-weight: 600;
       color: #555;
-      font-size: 20px;
     }
 
     .setting-item {
@@ -54,70 +103,52 @@
       align-items: center;
       justify-content: space-between;
       margin: 15px 0;
-      padding: 10px;
+      padding: 15px;
       background: white;
       border-radius: 8px;
+      border: 1px solid #e1e5e9;
     }
 
-    .setting-label {
-      font-weight: 500;
-      color: #333;
-    }
+    .setting-label { font-weight: 500; margin-bottom: 4px; }
+    .setting-description { font-size: 13px; color: #666; }
 
-    .setting-description {
-      font-size: 14px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    .toggle {
-      position: relative;
-      width: 50px;
-      height: 24px;
-    }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
+    /* Toggle */
+    .toggle { position: relative; width: 50px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
     .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc; border-radius: 24px;
       transition: 0.3s;
-      border-radius: 24px;
     }
-
     .slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
+      content: ""; position: absolute;
+      height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%;
       transition: 0.3s;
-      border-radius: 50%;
     }
+    .toggle input:checked + .slider { background-color: #667eea; }
+    .toggle input:checked + .slider:before { transform: translateX(26px); }
 
-    input:checked + .slider {
-      background-color: #667eea;
+    /* Buttons */
+    .button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      transition: all 0.2s ease;
     }
+    .button.primary { background: #667eea; color: white; }
+    .button.primary:hover { background: #5a67d8; }
+    .button.secondary { background: #e2e8f0; color: #444; }
+    .button.secondary:hover { background: #cbd5e0; }
+    .button.danger { background: #f56565; color: white; }
+    .button.danger:hover { background: #e53e3e; }
 
-    input:checked + .slider:before {
-      transform: translateX(26px);
-    }
-
-    .rules-container {
-      margin-top: 20px;
-    }
-
+    /* Rules container */
     .rule-item {
       background: white;
       padding: 15px;
@@ -140,14 +171,7 @@
       align-items: center;
     }
 
-    .input-field {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    .select-field {
+    .input-field, .select-field {
       padding: 8px 12px;
       border: 1px solid #ddd;
       border-radius: 6px;
@@ -155,52 +179,7 @@
       background: white;
     }
 
-    .color-picker {
-      width: 60px;
-      height: 36px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .button.primary {
-      background: #667eea;
-      color: white;
-    }
-
-    .button.primary:hover {
-      background: #5a67d8;
-    }
-
-    .button.secondary {
-      background: #e2e8f0;
-      color: #4a5568;
-    }
-
-    .button.secondary:hover {
-      background: #cbd5e0;
-    }
-
-    .button.danger {
-      background: #f56565;
-      color: white;
-    }
-
-    .button.danger:hover {
-      background: #e53e3e;
-    }
-
     .save-status {
-      text-align: center;
       margin-top: 20px;
       padding: 10px;
       border-radius: 6px;
@@ -219,60 +198,125 @@
       display: block;
     }
 
-    .add-rule-btn {
-      margin-top: 15px;
+    .save-status.info {
+      background: #bee3f8;
+      color: #2b6cb0;
+      display: block;
+    }
+
+    /* Actions container */
+    .actions-container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #e1e5e9;
+      margin-bottom: 20px;
+    }
+
+    .actions-container h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #555;
+    }
+
+    /* Responsive */
+    @media (max-width: 800px) {
+      .settings-layout { flex-direction: column; }
+      .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+      .nav-btn { flex: 1; text-align: center; margin: 0 5px; }
+      .rule-inputs { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Smart Tab Grouper Settings</h1>
-    
-    <div class="section">
-      <h2>General Settings</h2>
-      <div class="setting-item">
-        <div>
-          <div class="setting-label">Auto Group New Tabs</div>
-          <div class="setting-description">Automatically group tabs when they are created or updated</div>
+  <div class="settings-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2>Settings</h2>
+      <button class="nav-btn active" data-section="general">⚙️ General</button>
+      <button class="nav-btn" data-section="rules">📑 Rules</button>
+      <button class="nav-btn" data-section="actions">🚀 Actions</button>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <h1>Tab Forge</h1>
+
+      <!-- General -->
+      <div id="general" class="section active">
+        <h2>General Settings</h2>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Auto Group New Tabs</div>
+            <div class="setting-description">Automatically group tabs when they are created or updated</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="autoGroupToggle">
+            <span class="slider"></span>
+          </label>
         </div>
-        <label class="toggle">
-          <input type="checkbox" id="autoGroupToggle">
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div class="setting-item">
-        <div>
-          <div class="setting-label">Group by Domain</div>
-          <div class="setting-description">Enable automatic grouping by website domain</div>
+
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Group by Domain</div>
+            <div class="setting-description">Enable automatic grouping by website domain</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="groupByDomainToggle">
+            <span class="slider"></span>
+          </label>
         </div>
-        <label class="toggle">
-          <input type="checkbox" id="groupByDomainToggle">
-          <span class="slider"></span>
-        </label>
+        
+        <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+          <button class="button primary" id="saveGeneralBtn">Save Settings</button>
+        </div>
       </div>
-    </div>
 
-    <div class="section">
-      <h2>Custom Grouping Rules</h2>
-      <p>Create custom rules to group tabs based on URL, hostname, or title patterns.</p>
-      
-      <div class="rules-container" id="rulesContainer">
-        <!-- Rules will be dynamically added here -->
+      <!-- Rules -->
+      <div id="rules" class="section">
+        <h2>Custom Grouping Rules</h2>
+        <p>Create custom rules to group tabs based on URL, hostname, or title patterns.</p>
+        <div id="rulesContainer"></div>
+        <button class="button primary" id="addRuleBtn">+ Add New Rule</button>
+        <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+          <button class="button primary" id="saveRulesBtn">Save Rules</button>
+        </div>
       </div>
-      
-      <button class="button primary add-rule-btn" id="addRuleBtn">Add New Rule</button>
-    </div>
 
-    <div class="section">
-      <h2>Actions</h2>
-      <button class="button primary" id="saveBtn">Save Settings</button>
-      <button class="button secondary" id="resetBtn">Reset to Defaults</button>
-    </div>
-
-    <div id="saveStatus" class="save-status"></div>
+      <!-- Actions -->
+      <div id="actions" class="section">
+        <h2>Tab Actions</h2>
+        
+        <div class="actions-container">
+          <h3>Grouping Actions</h3>
+          <button class="button primary" id="groupTabsBtn">Group All Tabs by Domain</button>
+          <button class="button secondary" id="regroupTabsBtn">Regroup All Tabs</button>
+          <button class="button secondary" id="ungroupAllBtn">Ungroup All Tabs</button>
+        </div>
+        
+        <div class="actions-container">
+          <h3>Group Management</h3>
+          <button class="button secondary" id="expandAllBtn">Expand All Groups</button>
+          <button class="button secondary" id="collapseAllBtn">Collapse All Groups</button>
+        </div>
+        
+        <div class="actions-container">
+          <h3>Tab Management</h3>
+          <button class="button secondary" id="removeDuplicatesBtn">Remove Duplicate Tabs</button>
+        </div>
+        
+        <div class="actions-container">
+          <h3>Settings Management</h3>
+          <button class="button primary" id="saveBtn">💾 Save All Settings & Regroup Tabs</button>
+          <button class="button secondary" id="resetBtn">♻ Reset to Defaults</button>
+        </div>
+        
+        <div id="saveStatus" class="save-status"></div>
+      </div>
+    </main>
   </div>
 
+  <script src="navigation.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

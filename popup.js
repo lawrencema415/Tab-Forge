@@ -1,61 +1,85 @@
-// Popup script for Smart Tab Grouper
+// Popup script for Tab Forge
 document.addEventListener('DOMContentLoaded', function () {
-	// Get DOM elements
-	const groupBtn = document.getElementById('groupBtn');
-	const removeDuplicatesBtn = document.getElementById('removeDuplicatesBtn');
-	const expandAllBtn = document.getElementById('expandAllBtn');
-	const collapseAllBtn = document.getElementById('collapseAllBtn');
-	const ungroupAllBtn = document.getElementById('ungroupAllBtn');
-	const settingsLink = document.getElementById('settingsLink');
-	const status = document.getElementById('status');
+  // Get DOM elements
+  const groupTabsBtn = document.getElementById('groupTabsBtn');
+  const ungroupAllBtn = document.getElementById('ungroupAllBtn');
+  const expandAllBtn = document.getElementById('expandAllBtn');
+  const collapseAllBtn = document.getElementById('collapseAllBtn');
+  const removeDuplicatesBtn = document.getElementById('removeDuplicatesBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const status = document.getElementById('status');
 
-	// Add event listeners
-	groupBtn.addEventListener('click', () =>
-		executeAction('groupByDomain', 'Tabs grouped by domain!')
-	);
-	removeDuplicatesBtn.addEventListener('click', () =>
-		executeAction('removeDuplicates', 'Duplicate tabs removed!')
-	);
-	expandAllBtn.addEventListener('click', () =>
-		executeAction('expandAll', 'All groups expanded!')
-	);
-	collapseAllBtn.addEventListener('click', () =>
-		executeAction('collapseAll', 'All groups collapsed!')
-	);
-	ungroupAllBtn.addEventListener('click', () =>
-		executeAction('ungroupAll', 'All tabs ungrouped!')
-	);
+  // Add event listeners for action buttons
+  groupTabsBtn.addEventListener('click', () => {
+    executeAction('groupByDomain', 'Tabs grouped by domain!');
+  });
 
-	settingsLink.addEventListener('click', (e) => {
-		e.preventDefault();
-		chrome.runtime.openOptionsPage();
-	});
+  ungroupAllBtn.addEventListener('click', () => {
+    executeAction('ungroupAll', 'All tabs ungrouped!');
+  });
 
-	async function executeAction(action, successMessage) {
-		showStatus('Processing...', 'info');
+  expandAllBtn.addEventListener('click', () => {
+    executeAction('expandAll', 'All groups expanded!');
+  });
 
-		try {
-			const response = await chrome.runtime.sendMessage({ action });
+  collapseAllBtn.addEventListener('click', () => {
+    executeAction('collapseAll', 'All groups collapsed!');
+  });
 
-			if (response.success) {
-				showStatus(successMessage, 'success');
-				setTimeout(() => hideStatus(), 2000);
-			} else {
-				showStatus('Action failed', 'error');
-				setTimeout(() => hideStatus(), 2000);
-			}
-		} catch (error) {
-			showStatus('Error occurred', 'error');
-			setTimeout(() => hideStatus(), 2000);
-		}
-	}
+  removeDuplicatesBtn.addEventListener('click', () => {
+    executeAction('removeDuplicates', 'Duplicate tabs removed!');
+  });
 
-	function showStatus(message, type) {
-		status.textContent = message;
-		status.className = `status show ${type}`;
-	}
+  // Settings button opens options page
+  settingsBtn.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
 
-	function hideStatus() {
-		status.className = 'status';
-	}
+  async function executeAction(action, successMessage) {
+    showStatus('Processing...', 'info');
+    console.log('Sending action:', action);
+
+    try {
+      // Add a timeout to the sendMessage call
+      const response = await Promise.race([
+        chrome.runtime.sendMessage({ action }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout: No response from background service')), 5000)
+        )
+      ]);
+      
+      console.log('Received response:', response);
+
+      // Check if response is defined
+      if (response && response.success) {
+        showStatus(successMessage, 'success');
+        setTimeout(() => hideStatus(), 2000);
+      } else if (response) {
+        showStatus(response.error || 'Action failed', 'error');
+        setTimeout(() => hideStatus(), 3000);
+      } else {
+        // Handle undefined response
+        showStatus('No response from background service', 'error');
+        setTimeout(() => hideStatus(), 3000);
+      }
+    } catch (error) {
+      console.error('Error executing action:', error);
+      if (error.message.includes('Timeout')) {
+        showStatus('Timeout: Background service not responding', 'error');
+      } else {
+        showStatus('Error: ' + (error.message || 'Could not connect to background service'), 'error');
+      }
+      setTimeout(() => hideStatus(), 3000);
+    }
+  }
+
+  function showStatus(message, type) {
+    status.textContent = message;
+    status.className = `status ${type}`;
+  }
+
+  function hideStatus() {
+    status.className = 'status';
+    status.textContent = '';
+  }
 });

@@ -1,6 +1,17 @@
-// Background script for Smart Tab Grouper
+// Background script for Tab Forge
+console.log('Background script loading...');
+
+chrome.runtime.onStartup.addListener(() => {
+  console.log('Tab Forge service worker started');
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('Tab Forge extension installed');
+});
+
 class TabGrouper {
 	constructor() {
+		console.log('TabGrouper constructor called');
 		this.defaultSettings = {
 			autoGroup: true,
 			groupByDomain: true,
@@ -27,27 +38,40 @@ class TabGrouper {
 			await chrome.storage.sync.set({ tabGroupSettings: this.defaultSettings });
 		}
 
+		// Small delay to ensure proper initialization
+		await new Promise(resolve => setTimeout(resolve, 100));
+
 		// Set up event listeners
 		this.setupEventListeners();
 	}
 
 	setupEventListeners() {
+		console.log('Setting up event listeners');
+		
 		// Listen for new tabs
 		chrome.tabs.onCreated.addListener((tab) => {
+			console.log('New tab created:', tab.id);
 			this.handleNewTab(tab);
 		});
 
 		// Listen for tab updates (URL changes)
 		chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 			if (changeInfo.url) {
+				console.log('Tab updated:', tabId, changeInfo.url);
 				this.handleTabUpdate(tab);
 			}
 		});
 
 		// Listen for messages from popup
-		chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-			this.handleMessage(message, sender, sendResponse);
-		});
+	const messageListener = (message, sender, sendResponse) => {
+		console.log('Message received in background:', message);
+		return this.handleMessage(message, sender, sendResponse);
+	};
+	
+	chrome.runtime.onMessage.addListener(messageListener);
+	console.log('Message listener registered');
+		
+		console.log('Event listeners set up');
 	}
 
 	async handleNewTab(tab) {
@@ -65,33 +89,57 @@ class TabGrouper {
 	}
 
 	async handleMessage(message, sender, sendResponse) {
-		switch (message.action) {
-			case 'groupByDomain':
-				await this.groupAllTabsByDomain();
-				sendResponse({ success: true });
-				break;
-			case 'ungroupAll':
-				await this.ungroupAllTabs();
-				sendResponse({ success: true });
-				break;
-			case 'expandAll':
-				await this.expandAllGroups();
-				sendResponse({ success: true });
-				break;
-			case 'collapseAll':
-				await this.collapseAllGroups();
-				sendResponse({ success: true });
-				break;
-			case 'removeDuplicates':
-				await this.removeDuplicateTabs();
-				sendResponse({ success: true });
-				break;
-			default:
-				sendResponse({ success: false, error: 'Unknown action' });
+		console.log('Received message:', message);
+		
+		try {
+			switch (message.action) {
+				case 'groupByDomain':
+					console.log('Executing groupByDomain');
+					await this.groupAllTabsByDomain();
+					console.log('groupByDomain completed');
+					sendResponse({ success: true, message: 'Tabs grouped' });
+					break;
+				case 'ungroupAll':
+					console.log('Executing ungroupAll');
+					await this.ungroupAllTabs();
+					console.log('ungroupAll completed');
+					sendResponse({ success: true, message: 'Tabs ungrouped' });
+					break;
+				case 'expandAll':
+					console.log('Executing expandAll');
+					await this.expandAllGroups();
+					console.log('expandAll completed');
+					sendResponse({ success: true, message: 'Groups expanded' });
+					break;
+				case 'collapseAll':
+					console.log('Executing collapseAll');
+					await this.collapseAllGroups();
+					console.log('collapseAll completed');
+					sendResponse({ success: true, message: 'Groups collapsed' });
+					break;
+				case 'removeDuplicates':
+					console.log('Executing removeDuplicates');
+					await this.removeDuplicateTabs();
+					console.log('removeDuplicates completed');
+					sendResponse({ success: true, message: 'Duplicates removed' });
+					break;
+				default:
+					console.log('Unknown action:', message.action);
+					sendResponse({ success: false, error: 'Unknown action: ' + (message.action || 'none') });
+			}
+		} catch (error) {
+			console.error('Error handling message:', error);
+			sendResponse({ success: false, error: error.message || 'Unknown error' });
 		}
+		
+		console.log('Response sent');
+		return true; // Indicates that sendResponse will be called asynchronously
 	}
 
 	async groupTab(tab) {
+		// Add a small delay to ensure page loads
+		await new Promise(resolve => setTimeout(resolve, 100));
+		
 		if (
 			!tab.url ||
 			tab.url.startsWith('chrome://') ||
@@ -161,8 +209,7 @@ class TabGrouper {
 	async createOrAddToGroup(tab, groupName, color) {
 		try {
 			const currentWindow = await chrome.windows.getCurrent();
-			const allTabs = await chrome.tabs.query({ windowId: currentWindow.id });
-
+			
 			// Check if group already exists
 			const existingGroups = await chrome.tabGroups.query({
 				windowId: currentWindow.id,
@@ -187,6 +234,7 @@ class TabGrouper {
 			}
 		} catch (error) {
 			console.error('Error grouping tab:', error);
+			// Don't throw the error to prevent breaking the entire process
 		}
 	}
 
@@ -196,6 +244,8 @@ class TabGrouper {
 
 		for (const tab of allTabs) {
 			await this.groupTab(tab);
+			// Add a small delay to prevent overwhelming the browser
+			await new Promise(resolve => setTimeout(resolve, 50));
 		}
 	}
 
@@ -206,6 +256,8 @@ class TabGrouper {
 		for (const tab of allTabs) {
 			if (tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
 				await chrome.tabs.ungroup(tab.id);
+				// Add a small delay to prevent overwhelming the browser
+				await new Promise(resolve => setTimeout(resolve, 50));
 			}
 		}
 	}
@@ -217,6 +269,8 @@ class TabGrouper {
 		for (const group of groups) {
 			if (group.collapsed) {
 				await chrome.tabGroups.update(group.id, { collapsed: false });
+				// Add a small delay to prevent overwhelming the browser
+				await new Promise(resolve => setTimeout(resolve, 50));
 			}
 		}
 	}
@@ -228,6 +282,8 @@ class TabGrouper {
 		for (const group of groups) {
 			if (!group.collapsed) {
 				await chrome.tabGroups.update(group.id, { collapsed: true });
+				// Add a small delay to prevent overwhelming the browser
+				await new Promise(resolve => setTimeout(resolve, 50));
 			}
 		}
 	}
@@ -268,4 +324,8 @@ class TabGrouper {
 }
 
 // Initialize the tab grouper
-new TabGrouper();
+console.log('Initializing TabGrouper');
+const tabGrouper = new TabGrouper();
+console.log('TabGrouper initialized');
+
+console.log('Background script fully loaded');

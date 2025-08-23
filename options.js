@@ -1,4 +1,4 @@
-// Options page script for Smart Tab Grouper
+// Options page script for Tab Forge
 class OptionsManager {
 	constructor() {
 		this.settings = {
@@ -30,6 +30,9 @@ class OptionsManager {
 			orange: '#f97316',
 		};
 
+		// Debounce timer for regrouping
+		this.regroupDebounceTimer = null;
+		
 		this.init();
 	}
 
@@ -47,32 +50,84 @@ class OptionsManager {
 		}
 	}
 
-	async saveSettings() {
+	async saveSettings(triggerRegroup = true) {
 		try {
 			await chrome.storage.sync.set({ tabGroupSettings: this.settings });
 			this.showStatus('Settings saved successfully!', 'success');
+			
+			// Trigger regrouping when settings are saved (unless explicitly disabled)
+			if (triggerRegroup) {
+				this.debounceRegroupTabs();
+			}
 		} catch (error) {
 			this.showStatus('Error saving settings', 'error');
 		}
 	}
 
+	// Debounced regrouping to prevent too many operations
+	debounceRegroupTabs() {
+		// Clear existing timer
+		if (this.regroupDebounceTimer) {
+			clearTimeout(this.regroupDebounceTimer);
+		}
+		
+		// Set new timer
+		this.regroupDebounceTimer = setTimeout(() => {
+			this.regroupTabs();
+			this.regroupDebounceTimer = null;
+		}, 1000); // Wait 1 second after the last change
+	}
+
+	async regroupTabs() {
+		try {
+			this.showStatus('Regrouping tabs...', 'info');
+			
+			// First ungroup all tabs
+			await chrome.runtime.sendMessage({ action: 'ungroupAll' });
+			
+			// Small delay to ensure ungrouping is complete
+			await new Promise(resolve => setTimeout(resolve, 500));
+			
+			// Then regroup all tabs
+			await chrome.runtime.sendMessage({ action: 'groupByDomain' });
+			
+			this.showStatus('Tabs regrouped successfully!', 'success');
+		} catch (error) {
+			console.error('Error regrouping tabs:', error);
+			this.showStatus('Error regrouping tabs: ' + (error.message || 'Unknown error'), 'error');
+		}
+	}
+
 	setupEventListeners() {
+		// General settings
 		document
 			.getElementById('autoGroupToggle')
 			.addEventListener('change', (e) => {
 				this.settings.autoGroup = e.target.checked;
+				// Don't save settings automatically - let user save when ready
 			});
 
 		document
 			.getElementById('groupByDomainToggle')
 			.addEventListener('change', (e) => {
 				this.settings.groupByDomain = e.target.checked;
+				// Don't save settings automatically - let user save when ready
 			});
+			
+		document.getElementById('saveGeneralBtn').addEventListener('click', () => {
+			this.saveSettings(); // This will trigger regrouping
+		});
 
+		// Rules
 		document.getElementById('addRuleBtn').addEventListener('click', () => {
 			this.addNewRule();
 		});
 
+		document.getElementById('saveRulesBtn').addEventListener('click', () => {
+			this.saveSettings(); // This will trigger regrouping
+		});
+
+		// Actions
 		document.getElementById('saveBtn').addEventListener('click', () => {
 			this.saveSettings();
 		});
@@ -80,6 +135,47 @@ class OptionsManager {
 		document.getElementById('resetBtn').addEventListener('click', () => {
 			this.resetToDefaults();
 		});
+
+		// Action buttons
+		document.getElementById('groupTabsBtn').addEventListener('click', () => {
+			this.executeAction('groupByDomain', 'Tabs grouped by domain!');
+		});
+
+		document.getElementById('regroupTabsBtn').addEventListener('click', () => {
+			this.regroupTabs();
+		});
+
+		document.getElementById('removeDuplicatesBtn').addEventListener('click', () => {
+			this.executeAction('removeDuplicates', 'Duplicate tabs removed!');
+		});
+
+		document.getElementById('expandAllBtn').addEventListener('click', () => {
+			this.executeAction('expandAll', 'All groups expanded!');
+		});
+
+		document.getElementById('collapseAllBtn').addEventListener('click', () => {
+			this.executeAction('collapseAll', 'All groups collapsed!');
+		});
+
+		document.getElementById('ungroupAllBtn').addEventListener('click', () => {
+			this.executeAction('ungroupAll', 'All tabs ungrouped!');
+		});
+	}
+
+	async executeAction(action, successMessage) {
+		try {
+			this.showStatus('Processing...', 'info');
+			const response = await chrome.runtime.sendMessage({ action });
+
+			if (response.success) {
+				this.showStatus(successMessage, 'success');
+			} else {
+				this.showStatus(response.error || 'Action failed', 'error');
+			}
+		} catch (error) {
+			console.error('Error executing action:', error);
+			this.showStatus('Error occurred: ' + (error.message || 'Unknown error'), 'error');
+		}
 	}
 
 	renderSettings() {
@@ -102,6 +198,7 @@ class OptionsManager {
 	createRuleElement(rule, index) {
 		const ruleDiv = document.createElement('div');
 		ruleDiv.className = 'rule-item';
+		ruleDiv.setAttribute('data-rule-index', index);
 
 		ruleDiv.innerHTML = `
       <div class="rule-header">
@@ -109,14 +206,14 @@ class OptionsManager {
           <label>
             <input type="checkbox" ${
 							rule.enabled ? 'checked' : ''
-						} onchange="optionsManager.toggleRule(${index})">
+						} class="rule-enabled-checkbox">
             Rule ${index + 1}
           </label>
         </div>
-        <button class="button danger" onclick="optionsManager.removeRule(${index})">Delete</button>
+        <button class="button danger rule-delete-btn">Delete</button>
       </div>
       <div class="rule-inputs">
-        <select class="select-field" onchange="optionsManager.updateRule(${index}, 'condition', this.value)">
+        <select class="select-field rule-condition-select">
           <option value="url" ${
 						rule.condition === 'url' ? 'selected' : ''
 					}>URL contains</option>
@@ -129,13 +226,12 @@ class OptionsManager {
         </select>
         <input 
           type="text" 
-          class="input-field" 
+          class="input-field rule-value-input" 
           placeholder="Enter pattern..."
           value="${rule.value || ''}"
-          onchange="optionsManager.updateRule(${index}, 'value', this.value)"
         >
         <div style="display: flex; gap: 10px; align-items: center;">
-          <select class="select-field" onchange="optionsManager.updateRule(${index}, 'color', this.value)" style="flex: 1;">
+          <select class="select-field rule-color-select" style="flex: 1;">
             ${Object.keys(this.colorOptions)
 							.map(
 								(color) =>
@@ -146,6 +242,7 @@ class OptionsManager {
 							.join('')}
           </select>
           <div 
+            class="rule-color-preview"
             style="width: 20px; height: 20px; border-radius: 4px; background: ${
 							this.colorOptions[rule.color] || '#9ca3af'
 						};"
@@ -155,16 +252,57 @@ class OptionsManager {
       <div style="margin-top: 10px;">
         <input 
           type="text" 
-          class="input-field" 
+          class="input-field rule-groupname-input" 
           placeholder="Group name..."
           value="${rule.groupName || ''}"
-          onchange="optionsManager.updateRule(${index}, 'groupName', this.value)"
           style="width: 100%;"
         >
       </div>
     `;
 
+		// Add event listeners to the created elements
+		this.attachRuleEventListeners(ruleDiv, index);
+
 		return ruleDiv;
+	}
+
+	attachRuleEventListeners(ruleElement, index) {
+		// Enable/disable checkbox
+		const enabledCheckbox = ruleElement.querySelector('.rule-enabled-checkbox');
+		enabledCheckbox.addEventListener('change', (e) => {
+			this.toggleRule(index);
+		});
+
+		// Delete button
+		const deleteBtn = ruleElement.querySelector('.rule-delete-btn');
+		deleteBtn.addEventListener('click', (e) => {
+			e.preventDefault();
+			this.removeRule(index);
+		});
+
+		// Condition select
+		const conditionSelect = ruleElement.querySelector('.rule-condition-select');
+		conditionSelect.addEventListener('change', (e) => {
+			this.updateRule(index, 'condition', e.target.value);
+		});
+
+		// Value input
+		const valueInput = ruleElement.querySelector('.rule-value-input');
+		valueInput.addEventListener('input', (e) => {
+			this.updateRule(index, 'value', e.target.value);
+		});
+
+		// Color select
+		const colorSelect = ruleElement.querySelector('.rule-color-select');
+		colorSelect.addEventListener('change', (e) => {
+			this.updateRule(index, 'color', e.target.value);
+		});
+
+		// Group name input
+		const groupNameInput = ruleElement.querySelector('.rule-groupname-input');
+		groupNameInput.addEventListener('input', (e) => {
+			this.updateRule(index, 'groupName', e.target.value);
+		});
 	}
 
 	addNewRule() {
@@ -178,24 +316,49 @@ class OptionsManager {
 
 		this.settings.customRules.push(newRule);
 		this.renderRules();
+		// Don't save settings automatically - let user save when ready
 	}
 
 	removeRule(index) {
-		this.settings.customRules.splice(index, 1);
-		this.renderRules();
+		if (confirm(`Are you sure you want to delete Rule ${index + 1}?`)) {
+			this.settings.customRules.splice(index, 1);
+			this.renderRules();
+			// Don't save settings automatically - let user save when ready
+			this.showStatus('Rule deleted successfully!', 'success');
+		}
 	}
 
 	toggleRule(index) {
-		this.settings.customRules[index].enabled =
-			!this.settings.customRules[index].enabled;
+		if (this.settings.customRules[index]) {
+			this.settings.customRules[index].enabled =
+				!this.settings.customRules[index].enabled;
+			const status = this.settings.customRules[index].enabled
+				? 'enabled'
+				: 'disabled';
+			this.showStatus(`Rule ${index + 1} ${status}!`, 'success');
+			// Don't save settings automatically - let user save when ready
+		}
 	}
 
 	updateRule(index, property, value) {
-		this.settings.customRules[index][property] = value;
+		if (this.settings.customRules[index]) {
+			this.settings.customRules[index][property] = value;
 
-		// Re-render to update color preview
-		if (property === 'color') {
-			this.renderRules();
+			// Update color preview if color changed
+			if (property === 'color') {
+				const ruleElement = document.querySelector(
+					`[data-rule-index="${index}"]`
+				);
+				if (ruleElement) {
+					const colorPreview = ruleElement.querySelector('.rule-color-preview');
+					if (colorPreview) {
+						colorPreview.style.background =
+							this.colorOptions[value] || '#9ca3af';
+					}
+				}
+			}
+			
+			// Don't save settings automatically - let user save when ready
 		}
 	}
 
@@ -222,9 +385,9 @@ class OptionsManager {
 				},
 			};
 
-			await this.saveSettings();
 			this.renderSettings();
 			this.renderRules();
+			this.showStatus('Settings reset to defaults!', 'success');
 		}
 	}
 
