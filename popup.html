@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Tab Grouper</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 0;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .header {
+      text-align: center;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .button:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .button.primary {
+      background: rgba(255, 255, 255, 0.9);
+      color: #667eea;
+      border: none;
+    }
+
+    .button.primary:hover {
+      background: white;
+    }
+
+    .status {
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.success {
+      color: #4ade80;
+    }
+
+    .status.error {
+      color: #f87171;
+    }
+
+    .settings-link {
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .settings-link a {
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      font-size: 12px;
+    }
+
+    .settings-link a:hover {
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Smart Tab Grouper</h1>
+  </div>
+  
+  <div class="content">
+    <div class="section">
+      <div class="section-title">Tab Actions</div>
+      <button id="groupBtn" class="button primary">Group Tabs by Domain</button>
+      <button id="removeDuplicatesBtn" class="button">Remove Duplicates</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Tab Group Actions</div>
+      <button id="expandAllBtn" class="button">Expand All Groups</button>
+      <button id="collapseAllBtn" class="button">Collapse All Groups</button>
+      <button id="ungroupAllBtn" class="button">Ungroup All Tabs</button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="settings-link">
+      <a href="#" id="settingsLink">⚙️ Settings & Rules</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
