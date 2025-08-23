@@ -154,12 +154,16 @@ class TabGrouper {
         case 'groupByDomain':
           console.log('Executing groupByDomain');
           await this.groupAllTabsByDomain();
+          // Collapse all groups after grouping for a smoother experience
+          await this.collapseAllGroups();
           console.log('groupByDomain completed');
           sendResponse({ success: true, message: 'Tabs grouped' });
           break;
         case 'ungroupAll':
           console.log('Executing ungroupAll');
           await this.ungroupAllTabs();
+          // Collapse all groups after ungrouping for a smoother experience
+          await this.collapseAllGroups();
           console.log('ungroupAll completed');
           sendResponse({ success: true, message: 'Tabs ungrouped' });
           break;
@@ -264,7 +268,48 @@ class TabGrouper {
   extractDomain(url: string): string {
     try {
       const hostname = new URL(url).hostname;
-      return hostname.replace('www.', '');
+      const domain = hostname.replace('www.', '');
+      
+      // Mapping of domain names to preferred display names
+      const domainNameMap: { [key: string]: string } = {
+        'chatgpt.com': 'ChatGPT',
+        'openai.com': 'OpenAI',
+        'github.com': 'GitHub',
+        'google.com': 'Google',
+        'youtube.com': 'YouTube',
+        'facebook.com': 'Facebook',
+        'instagram.com': 'Instagram',
+        'twitter.com': 'Twitter',
+        'linkedin.com': 'LinkedIn',
+        'reddit.com': 'Reddit',
+        'stackoverflow.com': 'Stack Overflow',
+        'gmail.com': 'Gmail',
+        'outlook.com': 'Outlook',
+        'notion.so': 'Notion',
+        'figma.com': 'Figma',
+        'slack.com': 'Slack',
+        'discord.com': 'Discord',
+        'zoom.us': 'Zoom',
+        'microsoft.com': 'Microsoft',
+        'amazon.com': 'Amazon',
+        'netflix.com': 'Netflix',
+        'spotify.com': 'Spotify',
+        // Add more mappings as needed
+      };
+      
+      // Check if we have a preferred name for this domain
+      if (domainNameMap[domain]) {
+        return domainNameMap[domain];
+      }
+      
+      // If not, apply a general transformation:
+      // 1. Split by dots and take the first part
+      // 2. Split by hyphens
+      // 3. Capitalize each word
+      const parts = domain.split('.')[0].split('-');
+      return parts.map(part => 
+        part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+      ).join(' ');
     } catch (e) {
       return 'Unknown';
     }
