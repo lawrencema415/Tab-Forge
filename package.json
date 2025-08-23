@@ -1,24 +1,24 @@
 {
-  "name": "tab-forge",
-  "version": "1.0.0",
-  "description": "Chrome extension for grouping tabs",
-  "main": "background.js",
-  "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
-    "clean": "del-cli *.js",
-    "dev": "tsc --watch"
-  },
-  "keywords": [
-    "chrome-extension",
-    "tabs",
-    "tab-groups"
-  ],
-  "author": "Tab Forge Developer",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/chrome": "^0.0.244",
-    "del-cli": "^5.0.0",
-    "typescript": "^5.0.0"
-  }
+	"name": "tab-forge",
+	"version": "1.0.0",
+	"description": "Chrome extension for grouping tabs",
+	"main": "background.js",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc --watch",
+		"clean": "del-cli *.js",
+		"dev": "tsc --watch"
+	},
+	"keywords": [
+		"chrome-extension",
+		"tabs",
+		"tab-groups"
+	],
+	"author": "Tab Forge Developer",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/chrome": "^0.0.244",
+		"del-cli": "^5.0.0",
+		"typescript": "^5.0.0"
+	}
 }
