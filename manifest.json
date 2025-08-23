@@ -3,12 +3,11 @@
 	"name": "Tab Forge",
 	"version": "1.0.0",
 	"description": "Automatically group tabs by domain or custom rules with configurable colors",
-	"permissions": ["tabs", "tabGroups", "storage", "activeTab"],
+	"permissions": ["tabs", "tabGroups", "storage", "activeTab", "sidePanel"],
 	"background": {
 		"service_worker": "background.js"
 	},
 	"action": {
-		"default_popup": "popup.html",
 		"default_title": "Tab Forge",
 		"default_icon": {
 			"16": "icons/icon16.png",
