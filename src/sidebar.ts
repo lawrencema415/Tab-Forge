@@ -12,6 +12,7 @@ interface Response {
 
 document.addEventListener('DOMContentLoaded', function () {
   console.log('Sidebar DOM loaded');
+  
   // Get DOM elements
   const groupTabsBtn = document.getElementById('groupTabsBtn');
   const ungroupAllBtn = document.getElementById('ungroupAllBtn');

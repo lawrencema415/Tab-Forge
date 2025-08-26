@@ -105,6 +105,12 @@ class OptionsManager {
 
   async regroupTabs(): Promise<void> {
     try {
+      const tabs = await chrome.tabs.query({});
+      if (tabs.length < 2) {
+        this.showStatus('Not enough tabs to regroup (need at least 2).', 'info');
+        return;
+      }
+
       this.showStatus('Regrouping tabs...', 'info');
       
       // First ungroup all tabs

@@ -94,7 +94,8 @@ class TabGrouper {
 
     // Listen for tab updates (URL changes)
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-      if (changeInfo.url) {
+      // Only react when the tab finishes loading
+      if (changeInfo.status === 'complete' && tab.url) {
         console.log('Tab updated:', tabId, changeInfo.url);
         this.handleTabUpdate(tab);
       }
@@ -124,14 +125,14 @@ class TabGrouper {
     });
 
     console.log('Message listener registered');
-    
     console.log('Event listeners set up');
   }
 
   async handleNewTab(tab: chrome.tabs.Tab): Promise<void> {
     const settings = await chrome.storage.sync.get(['tabGroupSettings']);
     if (settings.tabGroupSettings?.autoGroup) {
-      setTimeout(() => this.groupTab(tab), 1000); // Delay to ensure page loads
+      // Delay to ensure page loads
+      setTimeout(() => this.groupTab(tab), 500);
     }
   }
 
@@ -199,9 +200,9 @@ class TabGrouper {
   }
 
   async groupTab(tab: chrome.tabs.Tab): Promise<void> {
-    // Add a small delay to ensure page loads
+    // Small delay to ensure page loads
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     if (
       !tab.url ||
       tab.url.startsWith('chrome://') ||
@@ -217,19 +218,42 @@ class TabGrouper {
     // Check custom rules first
     const matchedRule = this.findMatchingRule(tab, customRules);
     if (matchedRule) {
-      await this.createOrAddToGroup(
-        tab,
-        matchedRule.groupName,
-        matchedRule.color
-      );
+      const currentWindow = await chrome.windows.getCurrent();
+      const allTabs = await chrome.tabs.query({ windowId: currentWindow.id });
+
+      const otherMatchingTabs = allTabs.filter(t => {
+        if (t.id === tab.id || !t.url) return false;
+        const rule = this.findMatchingRule(t, customRules);
+        return rule?.groupName === matchedRule.groupName;
+      });
+
+      // Only group if total tabs (this + others) >= 2
+      if (otherMatchingTabs.length >= 1) {
+        await this.createOrAddToGroup(tab, matchedRule.groupName, matchedRule.color);
+      }
       return;
     }
 
     // Group by domain if enabled
     if (groupByDomain) {
       const domain = this.extractDomain(tab.url);
-      const color = colors[domain] || this.getRandomColor();
-      await this.createOrAddToGroup(tab, domain, color);
+      const currentWindow = await chrome.windows.getCurrent();
+      const allTabs = await chrome.tabs.query({ windowId: currentWindow.id });
+
+      const otherTabsWithSameDomain = allTabs.filter(t => {
+        if (t.id === tab.id || !t.url) return false;
+        try {
+          return this.extractDomain(t.url) === domain;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      // Only group if there's at least one other tab → total = 2
+      if (otherTabsWithSameDomain.length >= 1) {
+        const color = colors[domain] || this.getRandomColor();
+        await this.createOrAddToGroup(tab, domain, color);
+      }
     }
   }
 
@@ -317,62 +341,47 @@ class TabGrouper {
 
   async createOrAddToGroup(tab: chrome.tabs.Tab, groupName: string, color: string): Promise<void> {
     try {
-      // Verify the tab still exists before trying to group it
-      try {
-        await chrome.tabs.get(tab.id!);
-      } catch (e) {
-        console.warn('Tab no longer exists, skipping grouping:', tab.id);
+      // Ensure tab exists
+      await chrome.tabs.get(tab.id!);
+
+      const currentWindow = await chrome.windows.getCurrent();
+
+      // Check if group already exists
+      const existingGroups = await chrome.tabGroups.query({ windowId: currentWindow.id });
+      const existingGroup = existingGroups.find(group => group.title === groupName);
+
+      if (existingGroup) {
+        // Add to existing group if it already has 1 tab → after adding, will be 2
+        const groupTabs = await chrome.tabs.query({ groupId: existingGroup.id });
+        if (groupTabs.length >= 1) {
+          await chrome.tabs.group({ tabIds: [tab.id!], groupId: existingGroup.id });
+        }
         return;
       }
 
-      const currentWindow = await chrome.windows.getCurrent();
-      
-      // Check if group already exists
-      const existingGroups = await chrome.tabGroups.query({
-        windowId: currentWindow.id,
-      });
-      const existingGroup = existingGroups.find(
-        (group) => group.title === groupName
-      );
-
-      if (existingGroup) {
-        // Add tab to existing group
-        await chrome.tabs.group({
-          tabIds: [tab.id!],
-          groupId: existingGroup.id,
-        });
-      } else {
-        // Check if there are other tabs with the same domain that are not yet grouped
-        const allTabs = await chrome.tabs.query({ windowId: currentWindow.id });
-        const tabsWithSameDomain = allTabs.filter(t => {
-          // Skip the current tab and already grouped tabs
-          if (t.id === tab.id || t.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
-            return false;
-          }
-          // Check if the tab has the same domain
-          try {
-            const domain = this.extractDomain(t.url || '');
-            return domain === groupName;
-          } catch (e) {
-            return false;
-          }
-        });
-
-        // Only create a group if there are at least 2 tabs with the same domain
-        if (tabsWithSameDomain.length >= 1) {
-          // This means there's at least one other tab + the current tab = 2 or more
-          const tabIds = [tab.id!, ...tabsWithSameDomain.map(t => t.id!)];
-          const groupId = await chrome.tabs.group({ tabIds });
-          await chrome.tabGroups.update(groupId, {
-            title: groupName,
-            color: color as chrome.tabGroups.ColorEnum,
-          });
+      // Creating new group: find ungrouped tabs with same domain
+      const allTabs = await chrome.tabs.query({ windowId: currentWindow.id });
+      const matchingTabs = allTabs.filter(t => {
+        if (t.id === tab.id || !t.url || t.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) return false;
+        try {
+          return this.extractDomain(t.url) === groupName;
+        } catch {
+          return false;
         }
-        // If there's only one tab with this domain, don't create a group
+      });
+
+      // Total tabs = current tab + matching tabs
+      // Only create group if total >= 2
+      if (matchingTabs.length >= 1) {
+        const tabIds = [tab.id!, ...matchingTabs.map(t => t.id!)];
+        const groupId = await chrome.tabs.group({ tabIds });
+        await chrome.tabGroups.update(groupId, {
+          title: groupName,
+          color: color as chrome.tabGroups.ColorEnum,
+        });
       }
-    } catch (error: any) {
-      console.error('Error grouping tab:', error);
-      // Don't throw the error to prevent breaking the entire process
+    } catch (e) {
+      console.warn("Error grouping tab:", e);
     }
   }
 
